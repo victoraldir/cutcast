@@ -20,7 +20,6 @@ jobs:
           # list of Docker images to use as base name for tags
           images: |
             ${{ secrets.DOCKER_HUB_USERNAME }}/cutcast
-            ghcr.io/username/app
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
