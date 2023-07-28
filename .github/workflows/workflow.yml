@@ -24,7 +24,9 @@ jobs:
       run: go test -v
     - name: Build
       run: go build -v
-    - name: Docker build
-      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/cutcast:$IMAGE_TAG
+    - name: Docker build with tag
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/cutcast:${{ github.ref }}
+    - name: Docker build latest
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/cutcast:latest
     - name: Docker push
       run: docker push ${{ secrets.DOCKER_USERNAME }}/cutcast
