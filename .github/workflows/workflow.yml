@@ -13,6 +13,24 @@ jobs:
         name: Checkout 
         uses: actions/checkout@v2
       -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            name/app
+            ghcr.io/username/app
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      -
         name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
@@ -28,5 +46,5 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          # Grab tag from git ref
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/cutcast:${{ github.ref }}
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/cutcast:${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
