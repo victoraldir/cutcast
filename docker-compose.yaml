@@ -1,0 +1,20 @@
+version: '3'
+services:
+  cutcast:
+    build: .
+    container_name: cutcast
+    ports:
+      - "8080:8080"
+    volumes:
+      - /tmp:/tmp
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - /tmp:/usr/share/nginx/html
+    depends_on:
+      - cutcast

@@ -31,14 +31,19 @@ type CreateRecordGroupUseCase interface {
 }
 
 type CreateRecordGroup struct {
-	fileRepository domain.RecordFileRepository
-	dbRepository   domain.RecordDbRepository
+	fileRepository      domain.RecordFileRepository
+	dbRepository        domain.RecordDbRepository
+	fsWatcherRepository domain.FsWatcherRepository
 }
 
-func NewCreateRecordGroup(fileRepository domain.RecordFileRepository, dbRepository domain.RecordDbRepository) CreateRecordGroup {
+func NewCreateRecordGroup(
+	fileRepository domain.RecordFileRepository,
+	dbRepository domain.RecordDbRepository,
+	fsWatcherRepository domain.FsWatcherRepository) CreateRecordGroup {
 	return CreateRecordGroup{
-		fileRepository: fileRepository,
-		dbRepository:   dbRepository,
+		fileRepository:      fileRepository,
+		dbRepository:        dbRepository,
+		fsWatcherRepository: fsWatcherRepository,
 	}
 }
 
@@ -50,6 +55,12 @@ func (i CreateRecordGroup) Execute(command RecordGroupCommand) (*RecordGroupResp
 
 	mediaPath := fmt.Sprintf("/tmp/%s", id)
 
+	// Create directory
+	err := i.fileRepository.CreateDir(mediaPath)
+	if err != nil {
+		return nil, err
+	}
+
 	recordGroup := domain.Record{
 		Url:    command.Url,
 		Id:     id,
@@ -60,13 +71,7 @@ func (i CreateRecordGroup) Execute(command RecordGroupCommand) (*RecordGroupResp
 	videoCh <- recordGroup
 
 	// Create record filesystem
-	err := i.fileRepository.Create(doneCh, videoCh, mediaPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create HLS filesystem
-	err = i.fileRepository.CreateHLS(mediaPath, 10)
+	err = i.fileRepository.Create(doneCh, videoCh, mediaPath)
 	if err != nil {
 		return nil, err
 	}

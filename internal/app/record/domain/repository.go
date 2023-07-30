@@ -4,6 +4,7 @@ type RecordFileRepository interface {
 	Create(done <-chan struct{}, record <-chan Record, mediaDir string) error
 	Trim(id string, trim Trim, mediaDir string) (*string, error)
 	CreateHLS(mediaDir string, segmentDuration int) error
+	CreateDir(mediaDir string) error
 }
 
 type RecordDbRepository interface {
@@ -16,4 +17,9 @@ type RecordDbRepository interface {
 type TrimDbRepository interface {
 	Create(recordId string, trim Trim) (Trim, error)
 	List(recordId string) ([]Trim, error)
+}
+
+type FsWatcherRepository interface {
+	Watch(path string) error
+	Unwatch(path string) error
 }

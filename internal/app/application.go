@@ -4,29 +4,43 @@ import (
 	"github.com/victoraldir/cutcast/internal/app/infra/config"
 	"github.com/victoraldir/cutcast/internal/app/record/infra/adapters"
 	"github.com/victoraldir/cutcast/internal/app/record/infra/controllers"
+	"github.com/victoraldir/cutcast/internal/app/record/infra/watchers"
 	"github.com/victoraldir/cutcast/internal/app/record/usecases"
 )
 
 type Application struct {
 	RecordGroupController controllers.RecordController
 	TrimGroupController   controllers.TrimController
+	FsWatcher             watchers.RealTimeStreamWatcher
 }
 
 func NewApplication(cfg config.Configuration) *Application {
 
+	// Watcher
+	fsWatcher, err := watchers.NewRealTimeStreamWatcher()
+	if err != nil {
+		panic(err)
+	}
+
+	// Start listening for events.
+	defer fsWatcher.Listen()
+
 	// Repositories
-	recordFileRepository := adapters.NewRecordFileFFMPEGRepository()
 	recordDbRepository := adapters.NewRecordDbMemoryRepository()
 	trimDbRepository := adapters.NewTrimDbMemoryRepository()
+	fsWatcherRepository := adapters.NewWatcherDbMemoryRepository(fsWatcher.Watch, fsWatcher.Unwatch)
+	recordFileRepository := adapters.NewRecordFileFFMPEGRepository()
 
 	// UseCases
 	createRecordGroupUseCase := usecases.NewCreateRecordGroup(
 		recordFileRepository,
 		recordDbRepository,
+		fsWatcherRepository,
 	)
 
 	finishRecordGroupUseCase := usecases.NewFinishRecordGroup(
 		recordDbRepository,
+		fsWatcherRepository,
 	)
 
 	trimRecordUseCase := usecases.NewTrimRecordGroup(
@@ -52,5 +66,6 @@ func NewApplication(cfg config.Configuration) *Application {
 			listTrimRecordGroupUseCase,
 			trimRecordUseCase,
 		),
+		FsWatcher: *fsWatcher,
 	}
 }

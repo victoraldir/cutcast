@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -134,13 +135,16 @@ func (r RecordFileFFMPEGRepository) Trim(id string, trim domain.Trim, mediaDir s
 	return &trimmedVideoPath, nil
 }
 
-func (r RecordFileFFMPEGRepository) CreateHLS(mediaPath string, segmentDuration int) error {
+func (r RecordFileFFMPEGRepository) CreateHLS(inputFile string, segmentDuration int) error {
 	// Create the output directory if it does not exist
-	if err := os.MkdirAll(mediaPath, 0755); err != nil {
-		return fmt.Errorf("failed to create output directory: %v", err)
-	}
+	// if err := os.MkdirAll(mediaPath, 0755); err != nil {
+	// 	return fmt.Errorf("failed to create output directory: %v", err)
+	// }
 
-	inputFile := fmt.Sprintf("%s/%s.part", mediaPath, VideoFileName)
+	// inputFile := fmt.Sprintf("%s/%s.part", mediaPath, VideoFileName)
+	// Get path by splitting the file name by / and removing the last element
+	pathSplit := strings.Split(inputFile, "/")
+	mediaPath := strings.Join(pathSplit[0:len(pathSplit)-1], "/")
 
 	createHLSCmd := func() error {
 		// Create the HLS playlist and segment the video using ffmpeg
@@ -176,4 +180,8 @@ func (r RecordFileFFMPEGRepository) CreateHLS(mediaPath string, segmentDuration 
 	}()
 
 	return nil
+}
+
+func (r RecordFileFFMPEGRepository) CreateDir(mediaDir string) error {
+	return os.MkdirAll(mediaDir, 0755)
 }

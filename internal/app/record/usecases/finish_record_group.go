@@ -7,12 +7,14 @@ type FinishRecordGroupUseCase interface {
 }
 
 type FinishRecordGroup struct {
-	dbRepository domain.RecordDbRepository
+	dbRepository        domain.RecordDbRepository
+	fsWatcherRepository domain.FsWatcherRepository
 }
 
-func NewFinishRecordGroup(dbRepository domain.RecordDbRepository) FinishRecordGroup {
+func NewFinishRecordGroup(dbRepository domain.RecordDbRepository, fsWatcherRepository domain.FsWatcherRepository) FinishRecordGroup {
 	return FinishRecordGroup{
-		dbRepository: dbRepository,
+		dbRepository:        dbRepository,
+		fsWatcherRepository: fsWatcherRepository,
 	}
 }
 
@@ -28,6 +30,13 @@ func (i FinishRecordGroup) Execute(id string) error {
 	recordGroup.Status = domain.RecordStatusDone
 
 	_, err = i.dbRepository.Update(recordGroup)
+	if err != nil {
+		return err
+	}
+
+	// Unwatch
+	// err = i.fsWatcherRepository.Unwatch(recordGroup.GetFullPathDirectory())
+
 	if err != nil {
 		return err
 	}
