@@ -19,6 +19,7 @@ type TrimRecordGroupResponse struct {
 	EndTime   string `json:"end_time"`
 }
 
+//go:generate mockgen -destination=../usecases/mocks/mockTrimRecordGroupUseCase.go -package=usecases github.com/victoraldir/cutcast/internal/app/record/usecases TrimRecordGroupUseCase
 type TrimRecordGroupUseCase interface {
 	Execute(command TrimRecordGroupCommand) (*TrimRecordGroupResponse, error)
 }

@@ -13,19 +13,6 @@ type RecordController struct {
 	listRecordGroupUseCase   usecases.ListRecordGroupUseCase
 }
 
-type TrimController struct {
-	trimRecordGroupUseCase     usecases.TrimRecordGroupUseCase
-	listTrimRecordGroupUseCase usecases.ListTrimRecordGroupUseCase
-}
-
-func NewTrimController(listTrimRecordGroupUseCase usecases.ListTrimRecordGroupUseCase,
-	trimRecordGroupUseCase usecases.TrimRecordGroupUseCase) *TrimController {
-	return &TrimController{
-		listTrimRecordGroupUseCase: listTrimRecordGroupUseCase,
-		trimRecordGroupUseCase:     trimRecordGroupUseCase,
-	}
-}
-
 func NewRecordController(
 	createRecordGroupUseCase usecases.CreateRecordGroupUseCase,
 	finishRecordGroupUseCase usecases.FinishRecordGroupUseCase,
@@ -79,42 +66,5 @@ func (rc *RecordController) List(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, records)
-
-}
-
-func (tc *TrimController) List(ctx *gin.Context) {
-
-	recordId := ctx.Param("id")
-
-	records, err := tc.listTrimRecordGroupUseCase.Execute(recordId)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, records)
-
-}
-
-func (tc *TrimController) Create(ctx *gin.Context) {
-
-	recordId := ctx.Param("id")
-
-	var command usecases.TrimRecordGroupCommand
-
-	if err := ctx.ShouldBindJSON(&command); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	command.RecordId = recordId
-
-	response, err := tc.trimRecordGroupUseCase.Execute(command)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, response)
 
 }

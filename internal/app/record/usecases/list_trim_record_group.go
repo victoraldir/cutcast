@@ -2,6 +2,7 @@ package usecases
 
 import "github.com/victoraldir/cutcast/internal/app/record/domain"
 
+//go:generate mockgen -destination=../usecases/mocks/mockListTrimRecordGroupUseCase.go -package=usecases github.com/victoraldir/cutcast/internal/app/record/usecases ListTrimRecordGroupUseCase
 type ListTrimRecordGroupUseCase interface {
 	Execute(recordId string) ([]TrimRecordGroupResponse, error)
 }
