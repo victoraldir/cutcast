@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"net/http/httptest"
 	"testing"
 
@@ -23,7 +24,7 @@ func setup(t *testing.T) {
 
 }
 
-func TestList(t *testing.T) {
+func TestTrimController_List(t *testing.T) {
 
 	setup(t)
 
@@ -91,4 +92,102 @@ func TestList(t *testing.T) {
 		assert.Equal(t, 500, w.Code)
 	})
 
+}
+
+func TestTrimController_Create(t *testing.T) {
+
+	setup(t)
+
+	t.Run("should return 201 when trim record group", func(t *testing.T) {
+		//Arrange
+		expectedRecordId := "1"
+		expectedStartTime := "00:00:00"
+		expectedEndTime := "00:00:10"
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = gin.Params{
+			gin.Param{
+				Key:   "id",
+				Value: expectedRecordId,
+			},
+		}
+
+		c.Request = httptest.NewRequest("POST", "/trim", bytes.NewBuffer([]byte(`{"start_time":"`+expectedStartTime+`","end_time":"`+expectedEndTime+`"}`)))
+
+		trimController := NewTrimController(listTrimRecordGroupUseCaseMock, trimRecordGroupUseCaseMock)
+
+		// Act
+		trimRecordGroupUseCaseMock.EXPECT().Execute(usecases.TrimRecordGroupCommand{
+			RecordId:  expectedRecordId,
+			StartTime: expectedStartTime,
+			EndTime:   expectedEndTime,
+		}).Return(&usecases.TrimRecordGroupResponse{
+			StartTime: expectedStartTime,
+			EndTime:   expectedEndTime,
+			RecordId:  expectedRecordId,
+		}, nil)
+		trimController.Create(c)
+
+		// Assert
+		assert.Equal(t, 201, w.Code)
+	})
+
+	t.Run("should return 400. Missing recordId", func(t *testing.T) {
+		//Arrange
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		trimController := NewTrimController(listTrimRecordGroupUseCaseMock, trimRecordGroupUseCaseMock)
+
+		// Act
+		trimController.Create(c)
+
+		// Assert
+		assert.Equal(t, 400, w.Code)
+	})
+
+	t.Run("should return 400. Missing startTime", func(t *testing.T) {
+		//Arrange
+		expectedRecordId := "1"
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = gin.Params{
+			gin.Param{
+				Key:   "id",
+				Value: expectedRecordId,
+			},
+		}
+
+		trimController := NewTrimController(listTrimRecordGroupUseCaseMock, trimRecordGroupUseCaseMock)
+
+		// Act
+		trimController.Create(c)
+
+		// Assert
+		assert.Equal(t, 400, w.Code)
+	})
+
+	t.Run("should return 400. Missing endTime", func(t *testing.T) {
+		//Arrange
+		expectedRecordId := "1"
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = gin.Params{
+			gin.Param{
+				Key:   "id",
+				Value: expectedRecordId,
+			},
+		}
+
+		trimController := NewTrimController(listTrimRecordGroupUseCaseMock, trimRecordGroupUseCaseMock)
+
+		// Act
+		trimController.Create(c)
+
+		// Assert
+		assert.Equal(t, 400, w.Code)
+	})
 }
