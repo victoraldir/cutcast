@@ -71,10 +71,7 @@ func (i CreateRecordGroup) Execute(command RecordGroupCommand) (*RecordGroupResp
 	videoCh <- recordGroup
 
 	// Create record filesystem
-	err = i.fileRepository.Create(doneCh, videoCh, mediaPath)
-	if err != nil {
-		return nil, err
-	}
+	i.fileRepository.Create(doneCh, videoCh, mediaPath)
 
 	recordGroup, err = i.dbRepository.Create(recordGroup)
 	if err != nil {
