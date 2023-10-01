@@ -6,6 +6,7 @@ import (
 	"github.com/victoraldir/cutcast/internal/app/record/infra/controllers"
 	"github.com/victoraldir/cutcast/internal/app/record/infra/watchers"
 	"github.com/victoraldir/cutcast/internal/app/record/usecases"
+	"github.com/victoraldir/cutcast/pkg/command"
 )
 
 type Application struct {
@@ -29,7 +30,7 @@ func NewApplication(cfg config.Configuration) *Application {
 	recordDbRepository := adapters.NewRecordDbMemoryRepository()
 	trimDbRepository := adapters.NewTrimDbMemoryRepository()
 	fsWatcherRepository := adapters.NewWatcherDbMemoryRepository(fsWatcher.Watch, fsWatcher.Unwatch)
-	recordFileRepository := adapters.NewRecordFileFFMPEGRepository()
+	recordFileRepository := adapters.NewRecordFileFFMPEGRepository(command.NewCommandBuilder())
 
 	// UseCases
 	createRecordGroupUseCase := usecases.NewCreateRecordGroup(

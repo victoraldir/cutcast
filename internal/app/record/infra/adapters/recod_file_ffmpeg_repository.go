@@ -3,13 +3,12 @@ package adapters
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/victoraldir/cutcast/internal/app/record/domain"
+	"github.com/victoraldir/cutcast/pkg/command"
 )
 
 const (
@@ -17,53 +16,42 @@ const (
 )
 
 type RecordFileFFMPEGRepository struct {
-	cmd *exec.Cmd
-	mu  *sync.Mutex
+	// commandExecutor command.CommandExecutor
+	commandBuilder command.CommandBuilder
 }
 
-func NewRecordFileFFMPEGRepository() RecordFileFFMPEGRepository {
+func NewRecordFileFFMPEGRepository(commandBuilder command.CommandBuilder) RecordFileFFMPEGRepository {
 	return RecordFileFFMPEGRepository{
-		cmd: nil,
-		mu:  &sync.Mutex{},
+		commandBuilder: commandBuilder,
 	}
 }
 
-func (r RecordFileFFMPEGRepository) Create(done <-chan struct{}, recordCh <-chan domain.Record, mediaPath string) error {
+func (r RecordFileFFMPEGRepository) Create(done <-chan struct{}, recordCh <-chan domain.Record, mediaPath string) <-chan error {
 
-	startCmd := func(url string, videoPath string) error {
-		r.mu.Lock()
-		defer r.mu.Unlock()
+	var command command.CommandExecutor
+	// Create a buffered error channel
+	errCh := make(chan error)
 
-		if r.cmd != nil {
-			return fmt.Errorf("download already in progress")
-		}
-
-		r.cmd = exec.Command(
-			"youtube-dl",
+	startCmd := func(videoPath string, url string) error {
+		command = r.commandBuilder.Build("youtube-dl",
 			"-q",
 			"--write-info-json",
 			"--hls-use-mpegts",
 			"--hls-prefer-ffmpeg",
 			"-o", videoPath, url)
-		r.cmd.Stdout = os.Stdout
-		r.cmd.Stderr = os.Stderr
 
-		return r.cmd.Start()
-	}
-
-	stopCmd := func() error {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-
-		if r.cmd == nil {
-			return fmt.Errorf("no download in progress")
-		}
-
-		if err := r.cmd.Process.Signal(os.Interrupt); err != nil {
+		if err := command.Run(); err != nil {
 			return err
 		}
 
-		r.cmd = nil
+		return nil
+	}
+
+	stopCmd := func() error {
+
+		if err := command.Signal(); err != nil {
+			return err
+		}
 
 		return nil
 	}
@@ -72,23 +60,32 @@ func (r RecordFileFFMPEGRepository) Create(done <-chan struct{}, recordCh <-chan
 		for {
 			select {
 			case <-done:
-				if err := stopCmd(); err != nil {
-					fmt.Println(err)
+
+				if command == nil {
+					errCh <- fmt.Errorf("command is nil")
+					return
 				}
+
+				if err := stopCmd(); err != nil {
+					errCh <- err
+				}
+
+				return
 			case record := <-recordCh:
 
 				url := record.Url
 				videoPath := fmt.Sprintf("%s/%s", mediaPath, VideoFileName)
 
-				if err := startCmd(url, videoPath); err != nil {
-					fmt.Println(err)
+				if err := startCmd(videoPath, url); err != nil {
+					errCh <- err
+					return
 				}
 
 			}
 		}
 	}()
 
-	return nil
+	return errCh
 }
 
 func (r RecordFileFFMPEGRepository) Trim(id string, trim domain.Trim, mediaDir string) (trimmedPath *string, err error) {
@@ -102,33 +99,29 @@ func (r RecordFileFFMPEGRepository) Trim(id string, trim domain.Trim, mediaDir s
 		}
 	}
 
+	var command command.CommandExecutor
+
 	// Trim video
-	cmd := exec.Command(
+	command = r.commandBuilder.Build(
 		"ffmpeg",
-		// "-i", fmt.Sprintf("/tmp/%s/myvideo.mp4.part", id),
 		"-i", fmt.Sprintf("%s/myvideo.mp4.part", mediaDir),
 		"-ss", trim.StartTime,
 		"-to", trim.EndTime,
 		"-c", "copy", fmt.Sprintf("%s/%s", trimmedVideoPath, VideoFileName))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := command.Run(); err != nil {
 		return nil, err
 	}
 
 	// Create thumbnail
-	cmd = exec.Command(
+	command = r.commandBuilder.Build(
 		"ffmpeg",
-		// "-i", fmt.Sprintf("%s/myvideo.mp4", trimmedVideoPath),
 		"-i", fmt.Sprintf("%s/myvideo.mp4.part", mediaDir),
 		"-ss", "00:00:01.000",
 		"-vframes", "1",
 		fmt.Sprintf("%s/thumbnail.jpg", trimmedVideoPath))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := command.Run(); err != nil {
 		return nil, err
 	}
 
@@ -136,19 +129,13 @@ func (r RecordFileFFMPEGRepository) Trim(id string, trim domain.Trim, mediaDir s
 }
 
 func (r RecordFileFFMPEGRepository) CreateHLS(inputFile string, segmentDuration int) error {
-	// Create the output directory if it does not exist
-	// if err := os.MkdirAll(mediaPath, 0755); err != nil {
-	// 	return fmt.Errorf("failed to create output directory: %v", err)
-	// }
 
-	// inputFile := fmt.Sprintf("%s/%s.part", mediaPath, VideoFileName)
-	// Get path by splitting the file name by / and removing the last element
 	pathSplit := strings.Split(inputFile, "/")
 	mediaPath := strings.Join(pathSplit[0:len(pathSplit)-1], "/")
 
 	createHLSCmd := func() error {
 		// Create the HLS playlist and segment the video using ffmpeg
-		ffmpegCmd := exec.Command(
+		command := r.commandBuilder.Build(
 			"ffmpeg",
 			"-i", inputFile,
 			"-profile:v", "baseline", // baseline profile is compatible with most devices
@@ -160,9 +147,8 @@ func (r RecordFileFFMPEGRepository) CreateHLS(inputFile string, segmentDuration 
 			fmt.Sprintf("%s/playlist.m3u8", mediaPath),
 		)
 
-		output, err := ffmpegCmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("failed to create HLS: %v\nOutput: %s", err, string(output))
+		if err := command.Run(); err != nil {
+			return err
 		}
 
 		return nil
