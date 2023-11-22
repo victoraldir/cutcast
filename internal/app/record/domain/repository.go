@@ -1,7 +1,7 @@
 package domain
 
 type RecordFileRepository interface {
-	Create(done <-chan struct{}, record <-chan Record, mediaDir string) <-chan error
+	Create(done chan struct{}, record Record, mediaPath string) <-chan error
 	Trim(id string, trim Trim, mediaDir string) (*string, error)
 	CreateHLS(mediaDir string, segmentDuration int) error
 	CreateDir(mediaDir string) error

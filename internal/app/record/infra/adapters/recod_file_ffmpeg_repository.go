@@ -26,28 +26,30 @@ func NewRecordFileFFMPEGRepository(commandBuilder command.CommandBuilder) Record
 	}
 }
 
-func (r RecordFileFFMPEGRepository) Create(done <-chan struct{}, recordCh <-chan domain.Record, mediaPath string) <-chan error {
+func (r RecordFileFFMPEGRepository) Create(done chan struct{}, record domain.Record, mediaPath string) <-chan error {
 
-	var command command.CommandExecutor
-	// Create a buffered error channel
-	errCh := make(chan error)
+	filePath := fmt.Sprintf("%s/%s", mediaPath, VideoFileName)
 
-	startCmd := func(videoPath string, url string) error {
-		command = r.commandBuilder.Build("youtube-dl",
-			"-q",
-			"--write-info-json",
-			"--hls-use-mpegts",
-			"--hls-prefer-ffmpeg",
-			"-o", videoPath, url)
+	command := r.commandBuilder.Build("yt-dlp",
+		//"-q",
+		"--write-info-json",
+		"--hls-use-mpegts",
+		"--hls-prefer-ffmpeg",
+		"-v",
+		"-o", filePath, record.Url)
 
+	errCh := make(chan error, 1)
+
+	// Pass command to closure
+	startCmd := func() error {
 		if err := command.Run(); err != nil {
 			return err
 		}
-
 		return nil
 	}
 
 	stopCmd := func() error {
+		fmt.Printf("Stopping to record\n")
 
 		if err := command.Signal(); err != nil {
 			return err
@@ -57,31 +59,26 @@ func (r RecordFileFFMPEGRepository) Create(done <-chan struct{}, recordCh <-chan
 	}
 
 	go func() {
+		defer close(done)
+	out:
 		for {
 			select {
 			case <-done:
-
-				if command == nil {
-					errCh <- fmt.Errorf("command is nil")
-					return
-				}
-
-				if err := stopCmd(); err != nil {
-					errCh <- err
-				}
-
 				return
-			case record := <-recordCh:
-
-				url := record.Url
-				videoPath := fmt.Sprintf("%s/%s", mediaPath, VideoFileName)
-
-				if err := startCmd(videoPath, url); err != nil {
+			default:
+				if err := startCmd(); err != nil {
 					errCh <- err
-					return
 				}
-
+				break out
 			}
+		}
+	}()
+
+	go func() {
+		fmt.Println("Waiting for record...")
+		<-done
+		if err := stopCmd(); err != nil {
+			errCh <- err
 		}
 	}()
 
