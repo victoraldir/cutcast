@@ -37,6 +37,7 @@ func NewApplication(cfg config.Configuration) *Application {
 		recordFileRepository,
 		recordDbRepository,
 		fsWatcherRepository,
+		cfg.Media.Dir,
 	)
 
 	finishRecordGroupUseCase := usecases.NewFinishRecordGroup(
@@ -47,6 +48,7 @@ func NewApplication(cfg config.Configuration) *Application {
 	trimRecordUseCase := usecases.NewTrimRecordGroup(
 		recordFileRepository,
 		trimDbRepository,
+		cfg.Media.Dir,
 	)
 
 	listRecordGroupUseCase := usecases.NewListRecordGroup(

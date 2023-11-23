@@ -34,16 +34,19 @@ type CreateRecordGroup struct {
 	fileRepository      domain.RecordFileRepository
 	dbRepository        domain.RecordDbRepository
 	fsWatcherRepository domain.FsWatcherRepository
+	mediaDir            string
 }
 
 func NewCreateRecordGroup(
 	fileRepository domain.RecordFileRepository,
 	dbRepository domain.RecordDbRepository,
-	fsWatcherRepository domain.FsWatcherRepository) CreateRecordGroup {
+	fsWatcherRepository domain.FsWatcherRepository,
+	mediaDir string) CreateRecordGroup {
 	return CreateRecordGroup{
 		fileRepository:      fileRepository,
 		dbRepository:        dbRepository,
 		fsWatcherRepository: fsWatcherRepository,
+		mediaDir:            mediaDir,
 	}
 }
 
@@ -52,7 +55,7 @@ func (i CreateRecordGroup) Execute(command RecordGroupCommand) (*RecordGroupResp
 	id := uuid.New().String()
 	doneCh := make(chan struct{}, 1)
 
-	mediaPath := fmt.Sprintf("/tmp/%s", id)
+	mediaPath := fmt.Sprintf("%s/%s", i.mediaDir, id)
 
 	// Create directory
 	err := i.fileRepository.CreateDir(mediaPath)

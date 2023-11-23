@@ -27,13 +27,16 @@ type TrimRecordGroupUseCase interface {
 type TrimRecordGroup struct {
 	fileRepository            domain.RecordFileRepository
 	trimRecordGroupRepository domain.TrimDbRepository
+	mediaDir                  string
 }
 
 func NewTrimRecordGroup(fileRepository domain.RecordFileRepository,
-	trimRecordGroupRepository domain.TrimDbRepository) TrimRecordGroup {
+	trimRecordGroupRepository domain.TrimDbRepository,
+	mediaDir string) TrimRecordGroup {
 	return TrimRecordGroup{
 		fileRepository:            fileRepository,
 		trimRecordGroupRepository: trimRecordGroupRepository,
+		mediaDir:                  mediaDir,
 	}
 }
 
@@ -44,7 +47,7 @@ func (i TrimRecordGroup) Execute(command TrimRecordGroupCommand) (*TrimRecordGro
 		EndTime:   command.EndTime,
 	}
 
-	mediaDir := fmt.Sprintf("/tmp/%s", command.RecordId)
+	mediaDir := fmt.Sprintf("%s/%s", i.mediaDir, command.RecordId)
 
 	filePath, err := i.fileRepository.Trim(command.RecordId, trim, mediaDir)
 	if err != nil {
