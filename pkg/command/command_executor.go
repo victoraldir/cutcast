@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -19,8 +20,11 @@ func NewCommandBuilder() CommandBuilder {
 }
 
 func (c *commandBuilder) Build(command string, args ...string) CommandExecutor {
+
+	ctx := context.Background()
+
 	return NewCommandExecutor(
-		exec.Command(command, args...),
+		exec.CommandContext(ctx, command, args...),
 	)
 }
 
@@ -44,17 +48,11 @@ func NewCommandExecutor(cmd *exec.Cmd) CommandExecutor {
 }
 
 func (c *commadExecutor) Run() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.cmd != nil {
-		return nil
-	}
 
 	c.cmd.Stdout = os.Stdout
 	c.cmd.Stderr = os.Stderr
 
-	return c.cmd.Start()
+	return c.cmd.Run()
 }
 
 func (c *commadExecutor) Stop() error {

@@ -51,7 +51,6 @@ func (i CreateRecordGroup) Execute(command RecordGroupCommand) (*RecordGroupResp
 
 	id := uuid.New().String()
 	doneCh := make(chan struct{}, 1)
-	videoCh := make(chan domain.Record, 1)
 
 	mediaPath := fmt.Sprintf("/tmp/%s", id)
 
@@ -68,10 +67,8 @@ func (i CreateRecordGroup) Execute(command RecordGroupCommand) (*RecordGroupResp
 		Status: domain.RecordStatusProgress,
 	}
 
-	videoCh <- recordGroup
-
 	// Create record filesystem
-	i.fileRepository.Create(doneCh, videoCh, mediaPath)
+	i.fileRepository.Create(doneCh, recordGroup, mediaPath)
 
 	recordGroup, err = i.dbRepository.Create(recordGroup)
 	if err != nil {

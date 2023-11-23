@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"runtime"
+
 	"github.com/gin-gonic/gin"
 	"github.com/victoraldir/cutcast/internal/app"
 )
@@ -9,6 +11,12 @@ func MapRoutes(router *gin.Engine, app *app.Application) {
 	router.GET("/ping", func(context *gin.Context) {
 		context.JSON(200, gin.H{
 			"message": "pong",
+		})
+	})
+
+	router.GET("/numgoroutines", func(context *gin.Context) {
+		context.JSON(200, gin.H{
+			"num_goroutines": runtime.NumGoroutine(),
 		})
 	})
 
