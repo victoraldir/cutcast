@@ -33,3 +33,13 @@ deps:
 .PHONY: lint
 lint:
 	@golangci-lint run -v --timeout=5m -E gosec -E revive -E goconst -E misspell -E whitespace ./...
+
+publish:
+	@echo "Publishing $(VERSION)"
+	@docker build -t $(IMAGE_NAME):$(VERSION) .
+	@docker tag $(IMAGE_NAME):$(VERSION) $(IMAGE_NAME):latest
+	@docker push $(IMAGE_NAME):$(VERSION)
+	@docker push $(IMAGE_NAME):latest
+
+docker-login:
+	@docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)

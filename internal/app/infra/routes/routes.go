@@ -14,6 +14,13 @@ func MapRoutes(router *gin.Engine, app *app.Application) {
 		})
 	})
 
+	// Health check
+	router.GET("/health", func(context *gin.Context) {
+		context.JSON(200, gin.H{
+			"status": "UP",
+		})
+	})
+
 	router.GET("/numgoroutines", func(context *gin.Context) {
 		context.JSON(200, gin.H{
 			"num_goroutines": runtime.NumGoroutine(),
