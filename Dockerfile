@@ -16,7 +16,9 @@ RUN apk add --no-cache ca-certificates && \
     apk add ffmpeg && \
     apk add python3 && \
     apk add py3-pip && \
-    pip install --upgrade --force-reinstall "git+https://github.com/ytdl-org/youtube-dl.git"
+    apk add curl && \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp  # Make executable
      
 WORKDIR /app
 
